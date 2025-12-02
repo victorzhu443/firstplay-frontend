@@ -13,27 +13,31 @@ export default function JobDescriptionInput({ onSubmitComplete }: JobDescription
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setError(null);
+  
+const handleSubmit = async () => {
+  setSubmitting(true);
+  setError(null);
 
-    try {
-      let endpoint = '';
-      let body = {};
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    let endpoint = '';
+    let body = {};
 
-      if (inputType === 'text') {
-        if (jobText.trim().length < 50) {
-          throw new Error('Job description must be at least 50 characters');
-        }
-        endpoint = 'http://localhost:8000/api/job/description/manual';
-        body = { jd_text: jobText };
-      } else {
-        if (!jobUrl.trim()) {
-          throw new Error('Please enter a job URL');
-        }
-        endpoint = 'http://localhost:8000/api/job/url';
-        body = { url: jobUrl };
+    if (inputType === 'text') {
+      if (jobText.trim().length < 50) {
+        throw new Error('Job description must be at least 50 characters');
       }
+      endpoint = `${apiUrl}/api/job/description/manual`;
+      body = { jd_text: jobText };
+    } else {
+      if (!jobUrl.trim()) {
+        throw new Error('Please enter a job URL');
+      }
+      endpoint = `${apiUrl}/api/job/url`;
+      body = { url: jobUrl };
+    }
+
+
 
       const response = await fetch(endpoint, {
         method: 'POST',
