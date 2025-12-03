@@ -22,7 +22,8 @@ export default function AnalyzePage() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/pipeline/run', {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+	const response = await fetch(`${apiUrl}/api/pipeline/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resume_id: resumeId, job_id: jobId }),
