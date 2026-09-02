@@ -7,6 +7,7 @@ import GapAnalysisDisplay from '../components/GapAnalysisDisplay';
 import ProjectIdeasDisplay from '../components/ProjectIdeasDisplay';
 import ImprovedResumeDisplay from '../components/ImprovedResumeDisplay';
 import { PipelineResult } from '@/types';
+import { apiErrorMessage, humanizeStep } from '@/lib/apiError';
 
 export default function AnalyzePage() {
   const [resumeId, setResumeId] = useState<number | null>(null);
@@ -29,13 +30,15 @@ export default function AnalyzePage() {
         body: JSON.stringify({ resume_id: resumeId, job_id: jobId }),
       });
 
+      const body = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Analysis failed');
+        // `detail` is not always a string: the pipeline returns an object for
+        // a run that produced nothing, and FastAPI's 422s return an array.
+        throw new Error(apiErrorMessage(body, 'Analysis failed'));
       }
 
-      const data = await response.json();
-      setResults(data);
+      setResults(body);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
@@ -54,14 +57,35 @@ export default function AnalyzePage() {
           </p>
         </div>
 
-        {/* Gap Analysis */}
-        <GapAnalysisDisplay gapAnalysis={results.gap_analysis} />
+        {/* A run can stop partway and still return what it produced. Say so,
+            rather than leaving sections mysteriously absent. */}
+        {results.status === 'partial' && results.failures.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-lg space-y-1">
+            <p className="font-semibold">
+              ⚠️ We couldn&apos;t finish every step
+            </p>
+            <p className="text-sm">
+              Something went wrong while {humanizeStep(results.failures[0].node)}.
+              Everything that completed is shown below — you can start over to
+              try the rest again.
+            </p>
+          </div>
+        )}
 
-        {/* Project Ideas */}
-        <ProjectIdeasDisplay projects={results.projects} />
+        {/* Each section renders only when its step produced something. These
+            were previously unconditional, so a partial run passed null into a
+            non-nullable prop and crashed the page on `.projects.length`. */}
+        {results.gap_analysis && (
+          <GapAnalysisDisplay gapAnalysis={results.gap_analysis} />
+        )}
 
-        {/* Improved Resume */}
-        <ImprovedResumeDisplay improvedResume={results.improved_resume} />
+        {results.projects.length > 0 && (
+          <ProjectIdeasDisplay projects={results.projects} />
+        )}
+
+        {results.improved_resume && (
+          <ImprovedResumeDisplay improvedResume={results.improved_resume} />
+        )}
 
         {/* Start Over Button */}
         <div className="text-center">
