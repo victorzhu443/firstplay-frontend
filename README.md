@@ -10,20 +10,32 @@ wording but that the resume and the posting are describing different skill sets.
 
 **Live:** https://firstplay-frontend.vercel.app
 
-![The analyze view: resume upload on the left, job description on the right, with a three-step progress indicator above](docs/analyze.png)
+A real run against the live deployment — the resume's skills matched against a
+backend engineer posting, and the first of four generated projects:
+
+![Results view: skill gap analysis showing matched and missing skills, followed by a generated project with difficulty, duration, target skills and features to build](docs/results.png)
 
 <details>
-<summary>Landing page</summary>
+<summary>The full results page, and the rest of the flow</summary>
+
+All four projects and the rewritten resume:
+
+![Complete results page](docs/results-full.png)
+
+The analyze view, where a run starts:
+
+![The analyze view: resume upload on the left, job description on the right, with a three-step progress indicator above](docs/analyze.png)
+
+The landing page:
 
 ![FirstPlay Coach landing page](docs/landing.png)
 
 </details>
 
-<!--
-  Still to add: the results view (gap analysis pills, project cards, rewritten
-  resume). It only renders after a successful pipeline run, so capture it once
-  the backend's parse fix is deployed and save it as docs/results.png.
--->
+**A full run takes about 13 seconds** — median of 9 timed runs against the live
+deployment, range 11-16s, of which ~0.5s is the upload and job submission and
+the rest is four sequential LLM calls. Add ~47s to the first request of the day,
+while Render wakes the backend.
 
 ---
 
@@ -157,10 +169,13 @@ unused fetch helper, which is why the API URL is copy-pasted inline in three
 places instead. Deleting `src/` and moving the About page into `app/` fixes both
 this and the 404.
 
-**The wait can be much longer than the UI claims.** The analyze button reads
-"This may take 20-30 seconds". The backend sleeps on Render's free tier and
-takes about 47 seconds just to wake up, before any work starts, so a first
-request can run well past a minute with nothing on screen to explain it.
+**The progress message is wrong in both directions.** The analyze button reads
+"This may take 20-30 seconds". A warm run actually finishes in about 13 seconds,
+so the estimate undersells it — but the backend sleeps on Render's free tier and
+takes ~47s to wake before any work begins, so a first request runs past a minute
+with nothing on screen to explain the difference. One fixed string cannot
+describe both. Waking the backend on page load, or showing which of the five
+pipeline steps is running, would fit what actually happens.
 
 **The 10MB upload limit is not enforced anywhere.** The upload box says "PDF
 only (Max 10MB)", but `ResumeUpload.tsx` checks only the MIME type, and the
