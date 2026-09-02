@@ -61,7 +61,7 @@ export default function RootLayout({
           <footer className="bg-white border-t border-gray-200 mt-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <p className="text-center text-gray-600 text-sm">
-                © 2024 FirstPlay Coach. Built for early-career CS students.
+                © {new Date().getFullYear()} FirstPlay Coach. Built for early-career CS students.
               </p>
             </div>
           </footer>
