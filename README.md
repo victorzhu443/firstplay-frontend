@@ -177,10 +177,14 @@ with nothing on screen to explain the difference. One fixed string cannot
 describe both. Waking the backend on page load, or showing which of the five
 pipeline steps is running, would fit what actually happens.
 
-**The 10MB upload limit is not enforced anywhere.** The upload box says "PDF
-only (Max 10MB)", but `ResumeUpload.tsx` checks only the MIME type, and the
-backend's upload handler does not check size either. A larger file is accepted
-by both.
+**The advertised 10MB upload limit is wrong, and about to be wrong in a worse
+way.** The upload box says "PDF only (Max 10MB)", but `ResumeUpload.tsx` checks
+only the MIME type — it never looks at `file.size`. Today the backend does not
+check either, so an oversized file is simply accepted by both. The backend's
+production-readiness work adds a **5MB** server-side cap, at which point the
+label becomes actively misleading: a 7MB PDF passes the UI, uploads, and is
+rejected by the server. The fix is to check `file.size` client-side against the
+same number the server enforces, and to state that number in the label.
 
 **Results are lost on refresh.** Everything lives in React state with no URL or
 storage backing it, so a reload after a run means uploading and re-analysing
