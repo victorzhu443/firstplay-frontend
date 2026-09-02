@@ -1,36 +1,178 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FirstPlay Coach — Frontend
 
-## Getting Started
+Next.js client for FirstPlay Coach, a tool that reads a student's resume against
+a real job posting, shows which required skills are missing, and returns
+portfolio projects that would close the gap plus a rewritten resume tailored to
+that posting.
 
-First, run the development server:
+Built for early-career CS students, whose problem is usually not the resume's
+wording but that the resume and the posting are describing different skill sets.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+**Live:** https://firstplay-frontend.vercel.app
+
+![The analyze view: resume upload on the left, job description on the right, with a three-step progress indicator above](docs/analyze.png)
+
+<details>
+<summary>Landing page</summary>
+
+![FirstPlay Coach landing page](docs/landing.png)
+
+</details>
+
+<!--
+  Still to add: the results view (gap analysis pills, project cards, rewritten
+  resume). It only renders after a successful pipeline run, so capture it once
+  the backend's parse fix is deployed and save it as docs/results.png.
+-->
+
+---
+
+## What it does
+
+1. **Upload a resume.** PDF only, checked client-side before upload.
+2. **Add a job posting.** Paste the text, or give a URL for the backend to fetch
+   and strip.
+3. **Run the analysis.** One call to the backend's pipeline, which returns
+   everything below in a single response.
+4. **Read the results:**
+   - **Skill gap** — which required and preferred skills the resume matches, and
+     which it does not.
+   - **Project ideas** — 3-5 projects targeting the missing skills, each with
+     difficulty, an estimated duration, a tech list, and features to build.
+   - **Improved resume** — rewritten in Jake's template, every bullet shaped as
+     action verb + technical context + metric. Downloadable as **PDF**
+     (generated in-browser with jsPDF) or **LaTeX** (`.tex`, ready for Overleaf).
+
+---
+
+## Tech stack
+
+| | |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, TypeScript 5 |
+| Styling | Tailwind CSS 4 |
+| PDF generation | jsPDF 3 (client-side) |
+| Fonts | `next/font` — Inter |
+| Hosting | Vercel, auto-deploying from `main` |
+
+No state library and no data-fetching library. The whole flow is three `fetch`
+calls and `useState` in `app/analyze/page.tsx`, which is about the right amount
+of machinery for three steps.
+
+---
+
+## How it connects to the backend
+
+All analysis happens in [firstplay-backend](https://github.com/victorzhu443/firstplay-backend)
+(FastAPI + LangGraph, deployed on Render). This app renders its output and holds
+no logic of its own.
+
+The base URL comes from `NEXT_PUBLIC_API_URL`, falling back to
+`http://localhost:8000`:
+
+```ts
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Because the variable is `NEXT_PUBLIC_`, it is inlined into the client bundle at
+build time, not read at runtime — **changing it in Vercel requires a redeploy**,
+not just a restart.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Three endpoints are used, in order:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Step | Call | Returns |
+|---|---|---|
+| 1 | `POST /api/resume/upload` (multipart `file`) | `resume_id` |
+| 2 | `POST /api/job/description/manual` `{jd_text}` or `POST /api/job/url` `{url}` | `job_id` |
+| 3 | `POST /api/pipeline/run` `{resume_id, job_id}` | gap analysis, projects, improved resume |
 
-## Learn More
+Errors come back as `{"detail": "..."}` and are surfaced to the user directly.
 
-To learn more about Next.js, take a look at the following resources:
+This app's Vercel domain must be present in the backend's CORS allowlist in
+`app/main.py`, so a new domain needs adding there.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Running locally
 
-## Deploy on Vercel
+Requires Node 18+ and a running backend.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+git clone https://github.com/victorzhu443/firstplay-frontend
+cd firstplay-frontend
+npm install
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
+
+npm run dev
+```
+
+Open http://localhost:3000. Follow the backend repo's README to get the API up
+on port 8000 first — without it, uploads fail immediately.
+
+```bash
+npm run dev      # dev server
+npm run build    # production build
+npm run start    # serve the production build
+npm run lint     # eslint
+```
+
+---
+
+## Project layout
+
+```
+app/
+├── layout.tsx              Nav, footer, fonts
+├── page.tsx                Landing page
+├── globals.css             Tailwind entry
+├── analyze/page.tsx        The whole flow: upload → job → results
+└── components/
+    ├── ResumeUpload.tsx           Step 1
+    ├── JobDescriptionInput.tsx    Step 2 (text / URL toggle)
+    ├── GapAnalysisDisplay.tsx     Results: skill pills
+    ├── ProjectIdeasDisplay.tsx    Results: project cards
+    └── ImprovedResumeDisplay.tsx  Results: resume + PDF/LaTeX download
+types/index.ts              Shared API response types
+```
+
+---
+
+## Known issues
+
+Recorded rather than left to be discovered.
+
+**The About link 404s.** The nav in `app/layout.tsx` links to `/about` on every
+page, and the live site returns a 404 for it. The page exists, but at
+`src/app/about/page.tsx`, which Next.js never reads — see below.
+
+**There is a dead `src/` tree.** The repo contains both `app/` and `src/app/`.
+When both are present Next.js uses `app/` and ignores `src/` entirely, so
+`src/app/`, `src/lib/api.ts`, and `src/types/index.ts` are all dead code. They
+are close copies of the live files and have already drifted apart: the
+`ImprovedResume` type in `src/lib/api.ts` declares `education: string[]`, while
+the live `types/index.ts` allows objects too. `src/lib/api.ts` also holds an
+unused fetch helper, which is why the API URL is copy-pasted inline in three
+places instead. Deleting `src/` and moving the About page into `app/` fixes both
+this and the 404.
+
+**The wait can be much longer than the UI claims.** The analyze button reads
+"This may take 20-30 seconds". The backend sleeps on Render's free tier and
+takes about 47 seconds just to wake up, before any work starts, so a first
+request can run well past a minute with nothing on screen to explain it.
+
+**The 10MB upload limit is not enforced anywhere.** The upload box says "PDF
+only (Max 10MB)", but `ResumeUpload.tsx` checks only the MIME type, and the
+backend's upload handler does not check size either. A larger file is accepted
+by both.
+
+**Results are lost on refresh.** Everything lives in React state with no URL or
+storage backing it, so a reload after a run means uploading and re-analysing
+from scratch, at the cost of another four LLM calls.
+
+**The stale About page has wrong facts.** It claims Next.js 14 (this is 16) and
+"SQLite Database", which is true only until the next Render restart wipes it.
+Worth correcting when the page is moved somewhere it actually renders.
+
+**The footer reads © 2024.**
