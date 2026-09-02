@@ -55,7 +55,10 @@ export interface GapAnalysis {
   overlapping_skills: string[];
   missing_required_skills: string[];
   missing_preferred_skills: string[];
+  /** Skills the resume demonstrates in prose but never claims in a list. */
   weak_skills: string[];
+  /** JD entries that are requirements, not technologies: degrees, durations. */
+  non_skill_requirements?: string[];
 }
 
 export interface ProjectIdea {
@@ -95,13 +98,34 @@ export interface ImprovedProjectItem {
   bullets: string[];
 }
 
+/** How far a pipeline run got. `partial` and `complete` both arrive as 200. */
+export type PipelineStatus = 'complete' | 'partial' | 'failed';
+
+export interface PipelineFailure {
+  node: string;
+  error_type: string;
+  message: string;
+}
+
+/**
+ * A pipeline run's result.
+ *
+ * Every field after a failed step is null: the run halts at the node that
+ * failed and returns what it produced rather than discarding it. These were
+ * previously typed non-nullable, so a partial run type-checked and then threw
+ * at runtime on `improved_resume.projects`.
+ */
 export interface PipelineResult {
+  status: PipelineStatus;
   resume_id: number;
   job_id: number;
-  analysis_id: number;
-  project_plan_id: number;
-  improved_resume_id: number;
-  gap_analysis: GapAnalysis;
+  /** Nodes that succeeded, in order. */
+  completed_steps: string[];
+  failures: PipelineFailure[];
+  analysis_id: number | null;
+  project_plan_id: number | null;
+  improved_resume_id: number | null;
+  gap_analysis: GapAnalysis | null;
   projects: ProjectIdea[];
-  improved_resume: ImprovedResume;
+  improved_resume: ImprovedResume | null;
 }
