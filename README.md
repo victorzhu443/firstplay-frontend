@@ -138,6 +138,7 @@ npm run lint     # eslint
 app/
 ├── layout.tsx              Nav, footer, fonts
 ├── page.tsx                Landing page
+├── about/page.tsx          About
 ├── globals.css             Tailwind entry
 ├── analyze/page.tsx        The whole flow: upload → job → results
 └── components/
@@ -155,20 +156,6 @@ types/index.ts              Shared API response types
 
 Recorded rather than left to be discovered.
 
-**The About link 404s.** The nav in `app/layout.tsx` links to `/about` on every
-page, and the live site returns a 404 for it. The page exists, but at
-`src/app/about/page.tsx`, which Next.js never reads — see below.
-
-**There is a dead `src/` tree.** The repo contains both `app/` and `src/app/`.
-When both are present Next.js uses `app/` and ignores `src/` entirely, so
-`src/app/`, `src/lib/api.ts`, and `src/types/index.ts` are all dead code. They
-are close copies of the live files and have already drifted apart: the
-`ImprovedResume` type in `src/lib/api.ts` declares `education: string[]`, while
-the live `types/index.ts` allows objects too. `src/lib/api.ts` also holds an
-unused fetch helper, which is why the API URL is copy-pasted inline in three
-places instead. Deleting `src/` and moving the About page into `app/` fixes both
-this and the 404.
-
 **The progress message is wrong in both directions.** The analyze button reads
 "This may take 20-30 seconds". A warm run actually finishes in about 13 seconds,
 so the estimate undersells it — but the backend sleeps on Render's free tier and
@@ -177,21 +164,11 @@ with nothing on screen to explain the difference. One fixed string cannot
 describe both. Waking the backend on page load, or showing which of the five
 pipeline steps is running, would fit what actually happens.
 
-**The advertised 10MB upload limit is wrong, and about to be wrong in a worse
-way.** The upload box says "PDF only (Max 10MB)", but `ResumeUpload.tsx` checks
-only the MIME type — it never looks at `file.size`. Today the backend does not
-check either, so an oversized file is simply accepted by both. The backend's
-production-readiness work adds a **5MB** server-side cap, at which point the
-label becomes actively misleading: a 7MB PDF passes the UI, uploads, and is
-rejected by the server. The fix is to check `file.size` client-side against the
-same number the server enforces, and to state that number in the label.
+**The API base URL is copy-pasted in three places.** `analyze/page.tsx`,
+`ResumeUpload.tsx` and `JobDescriptionInput.tsx` each rebuild
+`process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'` inline. One shared
+helper would do, and would give error handling a single home.
 
 **Results are lost on refresh.** Everything lives in React state with no URL or
 storage backing it, so a reload after a run means uploading and re-analysing
 from scratch, at the cost of another four LLM calls.
-
-**The stale About page has wrong facts.** It claims Next.js 14 (this is 16) and
-"SQLite Database", which is true only until the next Render restart wipes it.
-Worth correcting when the page is moved somewhere it actually renders.
-
-**The footer reads © 2024.**

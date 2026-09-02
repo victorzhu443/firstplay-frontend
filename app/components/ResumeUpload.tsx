@@ -11,11 +11,21 @@ export default function ResumeUpload({ onUploadComplete }: ResumeUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Matches MAX_UPLOAD_BYTES in the backend's app/routers/resume.py. Checking
+  // here too means an oversized file is rejected before it is uploaded, rather
+  // than after the round trip.
+  const MAX_UPLOAD_MB = 5;
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       if (selectedFile.type !== 'application/pdf') {
         setError('Please upload a PDF file');
+        return;
+      }
+      if (selectedFile.size > MAX_UPLOAD_MB * 1024 * 1024) {
+        const actualMb = (selectedFile.size / (1024 * 1024)).toFixed(1);
+        setError(`That file is ${actualMb} MB. The maximum is ${MAX_UPLOAD_MB} MB.`);
         return;
       }
       setFile(selectedFile);
@@ -78,7 +88,7 @@ const response = await fetch(`${apiUrl}/api/resume/upload`, {
           <span className="text-sm font-medium text-gray-700">
             {file ? file.name : 'Click to upload or drag and drop'}
           </span>
-          <span className="text-xs text-gray-500">PDF only (Max 10MB)</span>
+          <span className="text-xs text-gray-500">PDF only (Max {MAX_UPLOAD_MB}MB)</span>
         </label>
       </div>
 

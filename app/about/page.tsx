@@ -31,17 +31,17 @@ export default function About() {
             <ul className="text-gray-700 space-y-1">
               <li>• FastAPI (Python)</li>
               <li>• LangChain & LangGraph</li>
-              <li>• OpenAI GPT-4</li>
-              <li>• SQLite Database</li>
+              <li>• OpenAI gpt-4o-mini</li>
+              <li>• PostgreSQL</li>
             </ul>
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">Frontend</h3>
             <ul className="text-gray-700 space-y-1">
-              <li>• Next.js 14</li>
+              <li>• Next.js 16</li>
               <li>• TypeScript</li>
               <li>• Tailwind CSS</li>
-              <li>• React</li>
+              <li>• React 19</li>
             </ul>
           </div>
         </div>
