@@ -128,7 +128,17 @@ npm run dev      # dev server
 npm run build    # production build
 npm run start    # serve the production build
 npm run lint     # eslint
+npm test         # vitest, once
+npm run test:watch
 ```
+
+## Tests
+
+Vitest with React Testing Library, run in jsdom. Every component under
+`app/components/` has a test file next to it in `__tests__/`, and
+`lib/apiError.ts` has unit tests. Network calls are stubbed at `fetch`, so the
+suite runs without a backend. GitHub Actions runs type-check and tests on every
+pull request.
 
 ---
 
@@ -146,7 +156,10 @@ app/
     ├── JobDescriptionInput.tsx    Step 2 (text / URL toggle)
     ├── GapAnalysisDisplay.tsx     Results: skill pills
     ├── ProjectIdeasDisplay.tsx    Results: project cards
-    └── ImprovedResumeDisplay.tsx  Results: resume + PDF/LaTeX download
+    ├── ImprovedResumeDisplay.tsx  Results: resume + PDF/LaTeX download
+    └── __tests__/                 One test file per component
+lib/apiError.ts             Turns API error bodies into readable messages
+test/                       Vitest setup and shared fixtures
 types/index.ts              Shared API response types
 ```
 
