@@ -1,0 +1,14 @@
+# RC-7 — supply chain. Weekly bumps for the npm lockfile and for the
+# SHA-pinned actions in .github/workflows; each arrives as a PR behind the
+# test and audit jobs.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
